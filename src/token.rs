@@ -1,3 +1,20 @@
+pub struct Token {
+    r#type: TokenType,
+    type_literal: String,
+    value: String,
+}
+
+impl Token {
+    pub fn new(tok_type: TokenType, value: String) -> Token {
+        let tok_lit = get_type_literal(&tok_type);
+        Token {
+            r#type: tok_type,
+            type_literal: tok_lit,
+            value: value,
+        }
+    }
+}
+
 pub enum TokenType {
     Illegal,
     NewLine,
@@ -144,15 +161,8 @@ pub enum TokenType {
     Nil,
 }
 
-pub struct Token {
-    Type: TokenType,
-    TypeLiteral: String,
-    Value: String,
-}
-
-
-pub fn getTypeLiteral(tType: TokenType) -> String {
-    let result: String = String::from(match tType {
+pub fn get_type_literal(tok_type: &TokenType) -> String {
+    let result: String = String::from(match tok_type {
         TokenType::Illegal => "Illegal",
         TokenType::NewLine => "NewLine",
         TokenType::EOF => "EOF",
