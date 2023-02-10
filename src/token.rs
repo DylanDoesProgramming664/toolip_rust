@@ -1,21 +1,25 @@
+#![allow(dead_code, non_snake_case)]
+#[derive(Clone, PartialEq)]
 pub struct Token {
-    r#type: TokenType,
-    type_literal: String,
-    value: String,
+    pub Type: TokenType,
+    pub type_literal: String,
+    pub value: String,
 }
 
 impl Token {
     pub fn new(tok_type: TokenType, value: String) -> Token {
         let tok_lit = get_type_literal(&tok_type);
         Token {
-            r#type: tok_type,
+            Type: tok_type,
             type_literal: tok_lit,
             value: value,
         }
     }
 }
 
+#[derive(PartialEq, Clone)]
 pub enum TokenType {
+    None,
     Illegal,
     NewLine,
     EOF,
@@ -137,7 +141,6 @@ pub enum TokenType {
     Float64Type,
     CharType,
     StringType,
-    Void,
     Array,
     Table,
     Stack,
@@ -162,10 +165,11 @@ pub enum TokenType {
 }
 
 pub fn get_type_literal(tok_type: &TokenType) -> String {
-    let result: String = String::from(match tok_type {
-        TokenType::Illegal => "Illegal",
-        TokenType::NewLine => "NewLine",
-        TokenType::EOF => "EOF",
+    match tok_type {
+        TokenType::None => "<None>",
+        TokenType::Illegal => "<Illegal>",
+        TokenType::NewLine => "<NewLine>",
+        TokenType::EOF => "<EOF>",
         TokenType::Identifier => "Identifier",
         TokenType::BoolVal(_) => "BoolVal",
         TokenType::UInt8Val(_) => "UInt8Val",
@@ -256,7 +260,7 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Loop => "Loop",
         TokenType::Break => "Break",
         TokenType::To => "To",
-        TokenType::Etc => "Etc",
+        TokenType::Etc => "...",
         TokenType::Switch => "Switch",
         TokenType::Case => "Case",
         TokenType::In => "In",
@@ -276,7 +280,6 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Float64Type => "Float64Type",
         TokenType::CharType => "CharType",
         TokenType::StringType => "StringType",
-        TokenType::Void => "Void",
         TokenType::Array => "Array",
         TokenType::Table => "Table",
         TokenType::Stack => "Stack",
@@ -298,7 +301,6 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::True => "True",
         TokenType::False => "False",
         TokenType::Nil => "Nil",
-    });
-
-    return result;
+    }
+    .to_owned()
 }
