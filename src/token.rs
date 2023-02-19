@@ -1,5 +1,6 @@
 #![allow(dead_code, non_snake_case)]
-#[derive(Clone, PartialEq)]
+use crate::lexer::Lexer;
+#[derive(Clone, PartialEq, Debug)]
 pub struct Token {
     pub Type: TokenType,
     pub type_literal: String,
@@ -12,17 +13,31 @@ impl Token {
         Token {
             Type: tok_type,
             type_literal: tok_lit,
-            value: value,
+            value,
         }
+    }
+
+    pub fn new_type(&mut self, tok_type: TokenType) {
+        self.type_literal = get_type_literal(&tok_type);
+        self.Type = tok_type;
+    }
+
+    pub fn reevaluate_token(&mut self, tok_value: String) {
+        let input = tok_value.as_str().chars().collect::<Vec<char>>();
+        let mut sub_lexer = Lexer::new(input);
+        let tok = sub_lexer.next_token();
+        self.type_literal = get_type_literal(&tok.Type);
+        self.Type = tok.Type;
+        self.value = tok.value;
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum TokenType {
     None,
     Illegal,
     NewLine,
-    EOF,
+    Eof,
 
     /* Identifiers & Literals */
     Identifier,
@@ -90,7 +105,8 @@ pub enum TokenType {
     Comma,
     Dot,
     Colon,
-    Arrow,
+    ThinArrow,
+    ThickArrow,
     AtSign,
     Dollar,
     LParen,
@@ -99,18 +115,20 @@ pub enum TokenType {
     RBrace,
     LBracket,
     RBracket,
+    Etc,
 
     /* Keywords */
     Global,
     Const,
     Static,
-    Dynamic,
+    Jit,
     Unsafe,
     Coroutine,
     Func,
-    End,
-    Slf, // Can't write Self, so removed a letter out of spite :(
     This,
+    End,
+    Struct,
+    Slf, // Can't write Self, so removed a letter out of spite :(
     If,
     Then,
     Else,
@@ -121,9 +139,7 @@ pub enum TokenType {
     Loop,
     Break,
     To,
-    Etc,
-    Switch,
-    Case,
+    Match,
     In,
     With,
     BoolType,
@@ -153,7 +169,6 @@ pub enum TokenType {
     Tree,
     Enum,
     Type,
-    Struct,
     Return,
     And,
     Or,
@@ -169,7 +184,7 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::None => "<None>",
         TokenType::Illegal => "<Illegal>",
         TokenType::NewLine => "<NewLine>",
-        TokenType::EOF => "<EOF>",
+        TokenType::Eof => "<Eof>",
         TokenType::Identifier => "Identifier",
         TokenType::BoolVal(_) => "BoolVal",
         TokenType::UInt8Val(_) => "UInt8Val",
@@ -231,7 +246,8 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Comma => ",",
         TokenType::Dot => ".",
         TokenType::Colon => ":",
-        TokenType::Arrow => "->",
+        TokenType::ThinArrow => "->",
+        TokenType::ThickArrow => "=>",
         TokenType::AtSign => "@",
         TokenType::Dollar => "$",
         TokenType::LParen => "(",
@@ -243,13 +259,13 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Global => "Global",
         TokenType::Const => "Const",
         TokenType::Static => "Static",
-        TokenType::Dynamic => "Dynamic",
+        TokenType::Jit => "Jit",
         TokenType::Unsafe => "Unsafe",
         TokenType::Coroutine => "Coroutine",
         TokenType::Func => "Func",
+        TokenType::This => "This",
         TokenType::End => "End",
         TokenType::Slf => "Self",
-        TokenType::This => "This",
         TokenType::If => "If",
         TokenType::Then => "Then",
         TokenType::Else => "Else",
@@ -261,8 +277,7 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Break => "Break",
         TokenType::To => "To",
         TokenType::Etc => "...",
-        TokenType::Switch => "Switch",
-        TokenType::Case => "Case",
+        TokenType::Match => "Match",
         TokenType::In => "In",
         TokenType::With => "With",
         TokenType::BoolType => "BoolType",
@@ -303,4 +318,34 @@ pub fn get_type_literal(tok_type: &TokenType) -> String {
         TokenType::Nil => "Nil",
     }
     .to_owned()
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_token_new() {
+        let token = Token::new(TokenType::Int32Type, "int32".to_owned());
+        assert_eq!(token.Type, TokenType::Int32Type);
+        assert_eq!(token.type_literal, "Int32Type".to_owned());
+        assert_eq!(token.value, "int32".to_owned());
+    }
+
+    #[test]
+    fn test_token_new_type() {
+        let mut token = Token::new(TokenType::Int32Type, "int32".to_owned());
+        token.new_type(TokenType::Int64Type);
+        assert_eq!(token.Type, TokenType::Int64Type);
+        assert_eq!(token.type_literal, "Int64Type".to_owned());
+    }
+
+    #[test]
+    fn test_token_reevaluate_token() {
+        let mut token = Token::new(TokenType::Int32Type, "int32".to_owned());
+        let value = "int64".to_owned();
+        token.reevaluate_token(value.clone());
+        assert_eq!(token.Type, TokenType::Int64Type);
+        assert_eq!(token.type_literal, "Int64Type".to_owned());
+        assert_eq!(token.value, value);
+    }
 }

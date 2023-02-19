@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 quit = "1.2.0"
-reedline = "0.14.0"
+reedline = "0.15.0"
