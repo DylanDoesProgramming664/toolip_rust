@@ -3,7 +3,7 @@ use crate::lexer::{self, Lexer};
 use crate::token;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 
-pub fn start_repl() {
+pub fn start() {
     println!("Welcome to the Toolip Programming Language! Enter some code below and hit Enter to execute.");
     let mut line_editor = Reedline::create();
     let prompt = DefaultPrompt::new(
@@ -19,7 +19,7 @@ pub fn start_repl() {
                 let mut lex = Lexer::new(line);
                 lex.print_tokens();
             }
-            Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
+            Ok(Signal::CtrlD | Signal::CtrlC) => {
                 println!("\nAborted!");
                 break;
             }

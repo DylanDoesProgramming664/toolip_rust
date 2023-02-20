@@ -1,4 +1,4 @@
-#![allow(unused_imports, dead_code)]
+#![allow(unused_imports, dead_code, clippy::nursery)]
 use crate::token::{self, Token};
 
 pub trait Node {
@@ -22,7 +22,7 @@ impl Program {
         if !self.statements.is_empty() {
             return self.statements[0].token_value();
         }
-        "".to_owned()
+        String::new()
     }
 }
 

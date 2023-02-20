@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use crate::parser;
-use crate::token::{self, TokenType};
+use crate::token::{self, Type};
 use std::{env, process::exit};
 use token::Token;
 
@@ -17,7 +17,7 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(input: Vec<char>) -> Self {
-        let mut lexer = Lexer {
+        let mut lexer = Self {
             input,
             pos: 0,
             next_pos: 0,
@@ -25,7 +25,7 @@ impl Lexer {
             line_num: 1,
             char: '\x00',
             prev_char: '\x00',
-            prev_token: Token::new(TokenType::None, "<None>".to_owned()),
+            prev_token: Token::new(Type::None, "<None>".to_owned()),
         };
 
         lexer.next_char();
@@ -50,7 +50,7 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Token {
-        if self.prev_token.Type == TokenType::NewLine {
+        if self.prev_token.Type == Type::NewLine {
             self.line_num += 1;
             self.line_pos = 1;
         }
@@ -58,199 +58,7 @@ impl Lexer {
         self.skip_whitespace();
         self.skip_comments();
 
-        let token = match self.char {
-            '=' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::Equals, "==".to_owned())
-                }
-                '>' => {
-                    self.next_char();
-                    Token::new(TokenType::ThickArrow, "=>".to_owned())
-                }
-                _ => Token::new(TokenType::Assign, "=".to_owned()),
-            },
-            '+' => match self.peek_char() {
-                '+' => {
-                    self.next_char();
-                    Token::new(TokenType::Increment, "++".to_owned())
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::PlusEQ, "+=".to_owned())
-                }
-                _ => Token::new(TokenType::Plus, "+".to_owned()),
-            },
-            '-' => match self.peek_char() {
-                '-' => {
-                    self.next_char();
-                    Token::new(TokenType::Decrement, "--".to_owned())
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::MinusEQ, "-=".to_owned())
-                }
-                '>' => {
-                    self.next_char();
-                    Token::new(TokenType::ThinArrow, "->".to_owned())
-                }
-                _ => Token::new(TokenType::Minus, "-".to_owned()),
-            },
-            '*' => match self.peek_char() {
-                '*' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '=' => {
-                            self.next_char();
-                            Token::new(TokenType::ExpoEQ, "**=".to_owned())
-                        }
-                        _ => Token::new(TokenType::Expo, "**".to_owned()),
-                    }
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::MultEQ, "*=".to_owned())
-                }
-                _ => Token::new(TokenType::Mult, "*".to_owned()),
-            },
-            '/' => match self.peek_char() {
-                '/' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '=' => {
-                            self.next_char();
-                            Token::new(TokenType::FDivEQ, "//=".to_owned())
-                        }
-                        _ => Token::new(TokenType::FDiv, "//".to_owned()),
-                    }
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::DivEQ, "/=".to_owned())
-                }
-                _ => Token::new(TokenType::Div, "/".to_owned()),
-            },
-            '%' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::ModEQ, "%=".to_owned())
-                }
-                _ => Token::new(TokenType::Mod, "%".to_owned()),
-            },
-            '!' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::BoolNotEQ, "!=".to_owned())
-                }
-                _ => Token::new(TokenType::BoolNot, "!".to_owned()),
-            },
-            '~' => Token::new(TokenType::BitNot, "~".to_owned()),
-            '&' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::BitAndEQ, "&=".to_owned())
-                }
-                _ => Token::new(TokenType::BitAnd, "&".to_owned()),
-            },
-            '|' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::BitOrEQ, "|=".to_owned())
-                }
-                _ => Token::new(TokenType::BitOr, "|".to_owned()),
-            },
-            '^' => match self.peek_char() {
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::BitXorEQ, "^=".to_owned())
-                }
-                _ => Token::new(TokenType::BitXor, "^".to_owned()),
-            },
-            '?' => match self.peek_char() {
-                '?' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '=' => {
-                            self.next_char();
-                            Token::new(TokenType::CoalesceEQ, "??=".to_owned())
-                        }
-                        _ => Token::new(TokenType::Coalesce, "??".to_owned()),
-                    }
-                }
-                _ => Token::new(TokenType::Ternary, "?".to_owned()),
-            },
-            '.' => match self.peek_char() {
-                '.' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '.' => {
-                            self.next_char();
-                            Token::new(TokenType::Etc, "...".to_owned())
-                        }
-                        '=' => {
-                            self.next_char();
-                            Token::new(TokenType::ConcatEQ, "..=".to_owned())
-                        }
-                        _ => Token::new(TokenType::Concat, "..".to_owned()),
-                    }
-                }
-                _ => Token::new(TokenType::Dot, ".".to_owned()),
-            },
-            '<' => match self.peek_char() {
-                '<' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '=' => Token::new(TokenType::LShiftEQ, "<<=".to_owned()),
-                        _ => Token::new(TokenType::LShift, "<<".to_owned()),
-                    }
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::LessThanEQ, "<=".to_owned())
-                }
-                _ => Token::new(TokenType::LessThan, "<".to_owned()),
-            },
-            '>' => match self.peek_char() {
-                '>' => {
-                    self.next_char();
-                    match self.peek_char() {
-                        '=' => Token::new(TokenType::RShiftEQ, ">>=".to_owned()),
-                        _ => Token::new(TokenType::RShift, ">>".to_owned()),
-                    }
-                }
-                '=' => {
-                    self.next_char();
-                    Token::new(TokenType::GreaterThanEQ, ">=".to_owned())
-                }
-                _ => Token::new(TokenType::GreaterThan, ">".to_owned()),
-            },
-            '\'' => self.next_char_string(),
-            '"' => self.read_single_line_string(),
-            '`' => self.read_multi_line_string(),
-            ';' => Token::new(TokenType::Semicolon, self.char.clone().to_string()),
-            '(' => Token::new(TokenType::LParen, self.char.clone().to_string()),
-            ')' => Token::new(TokenType::RParen, self.char.clone().to_string()),
-            '{' => Token::new(TokenType::LBrace, self.char.clone().to_string()),
-            '}' => Token::new(TokenType::RBrace, self.char.clone().to_string()),
-            '[' => Token::new(TokenType::LBracket, self.char.clone().to_string()),
-            ']' => Token::new(TokenType::RBracket, self.char.clone().to_string()),
-            '#' => Token::new(TokenType::Hash, self.char.clone().to_string()),
-            ',' => Token::new(TokenType::Comma, self.char.clone().to_string()),
-            ':' => Token::new(TokenType::Colon, self.char.clone().to_string()),
-            '@' => Token::new(TokenType::AtSign, self.char.clone().to_string()),
-            '$' => Token::new(TokenType::Dollar, self.char.clone().to_string()),
-            '\n' => Token::new(TokenType::NewLine, self.char.clone().to_string()),
-            '\x00' => Token::new(TokenType::Eof, "".to_owned()),
-            x => {
-                if self.is_digit(x) {
-                    self.read_number()
-                } else if self.is_letter(x) {
-                    self.read_identifier()
-                } else {
-                    Token::new(TokenType::Illegal, x.to_string())
-                }
-            }
-        };
+        let token = self.match_token(self.char);
 
         self.prev_token = token.clone();
         self.next_char();
@@ -276,12 +84,207 @@ impl Lexer {
         }
     }
 
+    fn match_token(&mut self, char: char) -> Token {
+        match char {
+            '=' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::Equals, "==".to_owned())
+                }
+                '>' => {
+                    self.next_char();
+                    Token::new(Type::ThickArrow, "=>".to_owned())
+                }
+                _ => Token::new(Type::Assign, "=".to_owned()),
+            },
+            '+' => match self.peek_char() {
+                '+' => {
+                    self.next_char();
+                    Token::new(Type::Increment, "++".to_owned())
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::PlusEQ, "+=".to_owned())
+                }
+                _ => Token::new(Type::Plus, "+".to_owned()),
+            },
+            '-' => match self.peek_char() {
+                '-' => {
+                    self.next_char();
+                    Token::new(Type::Decrement, "--".to_owned())
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::MinusEQ, "-=".to_owned())
+                }
+                '>' => {
+                    self.next_char();
+                    Token::new(Type::ThinArrow, "->".to_owned())
+                }
+                _ => Token::new(Type::Minus, "-".to_owned()),
+            },
+            '*' => match self.peek_char() {
+                '*' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '=' => {
+                            self.next_char();
+                            Token::new(Type::ExpoEQ, "**=".to_owned())
+                        }
+                        _ => Token::new(Type::Expo, "**".to_owned()),
+                    }
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::MultEQ, "*=".to_owned())
+                }
+                _ => Token::new(Type::Mult, "*".to_owned()),
+            },
+            '/' => match self.peek_char() {
+                '/' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '=' => {
+                            self.next_char();
+                            Token::new(Type::FDivEQ, "//=".to_owned())
+                        }
+                        _ => Token::new(Type::FDiv, "//".to_owned()),
+                    }
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::DivEQ, "/=".to_owned())
+                }
+                _ => Token::new(Type::Div, "/".to_owned()),
+            },
+            '%' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::ModEQ, "%=".to_owned())
+                }
+                _ => Token::new(Type::Mod, "%".to_owned()),
+            },
+            '!' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::BoolNotEQ, "!=".to_owned())
+                }
+                _ => Token::new(Type::BoolNot, "!".to_owned()),
+            },
+            '~' => Token::new(Type::BitNot, "~".to_owned()),
+            '&' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::BitAndEQ, "&=".to_owned())
+                }
+                _ => Token::new(Type::BitAnd, "&".to_owned()),
+            },
+            '|' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::BitOrEQ, "|=".to_owned())
+                }
+                _ => Token::new(Type::BitOr, "|".to_owned()),
+            },
+            '^' => match self.peek_char() {
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::BitXorEQ, "^=".to_owned())
+                }
+                _ => Token::new(Type::BitXor, "^".to_owned()),
+            },
+            '?' => match self.peek_char() {
+                '?' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '=' => {
+                            self.next_char();
+                            Token::new(Type::CoalesceEQ, "??=".to_owned())
+                        }
+                        _ => Token::new(Type::Coalesce, "??".to_owned()),
+                    }
+                }
+                _ => Token::new(Type::Ternary, "?".to_owned()),
+            },
+            '.' => match self.peek_char() {
+                '.' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '.' => {
+                            self.next_char();
+                            Token::new(Type::Etc, "...".to_owned())
+                        }
+                        '=' => {
+                            self.next_char();
+                            Token::new(Type::ConcatEQ, "..=".to_owned())
+                        }
+                        _ => Token::new(Type::Concat, "..".to_owned()),
+                    }
+                }
+                _ => Token::new(Type::Dot, ".".to_owned()),
+            },
+            '<' => match self.peek_char() {
+                '<' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '=' => Token::new(Type::LShiftEQ, "<<=".to_owned()),
+                        _ => Token::new(Type::LShift, "<<".to_owned()),
+                    }
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::LessThanEQ, "<=".to_owned())
+                }
+                _ => Token::new(Type::LessThan, "<".to_owned()),
+            },
+            '>' => match self.peek_char() {
+                '>' => {
+                    self.next_char();
+                    match self.peek_char() {
+                        '=' => Token::new(Type::RShiftEQ, ">>=".to_owned()),
+                        _ => Token::new(Type::RShift, ">>".to_owned()),
+                    }
+                }
+                '=' => {
+                    self.next_char();
+                    Token::new(Type::GreaterThanEQ, ">=".to_owned())
+                }
+                _ => Token::new(Type::GreaterThan, ">".to_owned()),
+            },
+            '\'' => self.next_char_string(),
+            '"' => self.read_single_line_string(),
+            '`' => self.read_multi_line_string(),
+            ';' => Token::new(Type::Semicolon, self.char.clone().to_string()),
+            '(' => Token::new(Type::LParen, self.char.clone().to_string()),
+            ')' => Token::new(Type::RParen, self.char.clone().to_string()),
+            '{' => Token::new(Type::LBrace, self.char.clone().to_string()),
+            '}' => Token::new(Type::RBrace, self.char.clone().to_string()),
+            '[' => Token::new(Type::LBracket, self.char.clone().to_string()),
+            ']' => Token::new(Type::RBracket, self.char.clone().to_string()),
+            '#' => Token::new(Type::Hash, self.char.clone().to_string()),
+            ',' => Token::new(Type::Comma, self.char.clone().to_string()),
+            ':' => Token::new(Type::Colon, self.char.clone().to_string()),
+            '@' => Token::new(Type::AtSign, self.char.clone().to_string()),
+            '$' => Token::new(Type::Dollar, self.char.clone().to_string()),
+            '\n' => Token::new(Type::NewLine, self.char.clone().to_string()),
+            '\x00' => Token::new(Type::Eof, String::new()),
+            x => {
+                if self.is_digit(x) {
+                    self.read_number()
+                } else if self.is_letter(x) {
+                    self.read_identifier()
+                } else {
+                    Token::new(Type::Illegal, x.to_string())
+                }
+            }
+        }
+    }
+
     fn eat_line_comment(&mut self) {
         loop {
             self.next_char();
             match self.char {
-                '\n' => break,
-                '\x00' => break,
+                '\n' | '\x00' => break,
                 _ => (),
             }
         }
@@ -295,7 +298,7 @@ impl Lexer {
                     println!(
                         "Toolip:{}:{}: End of file reached before end of block comment.",
                         self.line_num, self.line_pos
-                    )
+                    );
                 }
                 ']' => {
                     if self.peek_char() == '#' {
@@ -323,12 +326,12 @@ impl Lexer {
                             exit(1);
                         }
                         return Token::new(
-                            TokenType::Illegal,
+                            Type::Illegal,
                             String::from_iter(&self.input[pos..self.pos]),
                         );
                     }
                     return Token::new(
-                        TokenType::CharVal(self.input[pos + 1]),
+                        Type::CharVal(self.input[pos + 1]),
                         format!("'{}'", self.input[pos + 1]),
                     );
                 }
@@ -342,7 +345,7 @@ impl Lexer {
                         exit(1);
                     }
                     return Token::new(
-                        TokenType::Illegal,
+                        Type::Illegal,
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -355,7 +358,7 @@ impl Lexer {
                         exit(1);
                     }
                     return Token::new(
-                        TokenType::Illegal,
+                        Type::Illegal,
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -379,7 +382,7 @@ impl Lexer {
             match self.char {
                 '"' => {
                     return Token::new(
-                        TokenType::StringVal(String::from_iter(&self.input[pos..=self.pos])),
+                        Type::StringVal(String::from_iter(&self.input[pos..=self.pos])),
                         String::from_iter(&self.input[pos..=self.pos]),
                     );
                 }
@@ -392,7 +395,7 @@ impl Lexer {
                         exit(1);
                     }
                     return Token::new(
-                        TokenType::Illegal,
+                        Type::Illegal,
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -405,7 +408,7 @@ impl Lexer {
                         exit(1);
                     }
                     return Token::new(
-                        TokenType::Illegal,
+                        Type::Illegal,
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -427,7 +430,7 @@ impl Lexer {
             match self.char {
                 '`' => {
                     return Token::new(
-                        TokenType::StringVal(String::from_iter(&self.input[pos..self.pos])),
+                        Type::StringVal(String::from_iter(&self.input[pos..self.pos])),
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -440,7 +443,7 @@ impl Lexer {
                         exit(1);
                     }
                     return Token::new(
-                        TokenType::Illegal,
+                        Type::Illegal,
                         String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
@@ -534,64 +537,64 @@ impl Lexer {
         let str = String::from_iter(&self.input[pos1..=pos2]);
 
         let token_type = match str.as_str() {
-            "global" => TokenType::Global,
-            "const" => TokenType::Const,
-            "static" => TokenType::Static,
-            "Jit" => TokenType::Jit,
-            "unsafe" => TokenType::Unsafe,
-            "coroutine" => TokenType::Coroutine,
-            "func" => TokenType::Func,
-            "this" => TokenType::This,
-            "struct" => TokenType::Struct,
-            "self" => TokenType::Slf,
-            "end" => TokenType::End,
-            "if" => TokenType::If,
-            "else" => TokenType::Else,
-            "elseif" => TokenType::ElseIf,
-            "then" => TokenType::Then,
-            "for" => TokenType::For,
-            "while" => TokenType::While,
-            "loop" => TokenType::Loop,
-            "break" => TokenType::Break,
-            "match" => TokenType::Match,
-            "to" => TokenType::To,
-            "in" => TokenType::In,
-            "with" => TokenType::With,
-            "bool" => TokenType::BoolType,
-            "uint8" => TokenType::UInt8Type,
-            "uint16" => TokenType::UInt16Type,
-            "uint32" => TokenType::UInt32Type,
-            "uint64" => TokenType::UInt64Type,
-            "uint128" => TokenType::UInt128Type,
-            "int8" => TokenType::Int8Type,
-            "int16" => TokenType::Int16Type,
-            "int32" => TokenType::Int32Type,
-            "int64" => TokenType::Int64Type,
-            "int128" => TokenType::Int128Type,
-            "flt32" => TokenType::Float32Type,
-            "flt64" => TokenType::Float64Type,
-            "char" => TokenType::CharType,
-            "string" => TokenType::StringType,
-            "array" => TokenType::Array,
-            "table" => TokenType::Table,
-            "stack" => TokenType::Stack,
-            "queue" => TokenType::Queue,
-            "set" => TokenType::Set,
-            "list" => TokenType::List,
-            "twolist" => TokenType::TwoList,
-            "heap" => TokenType::Heap,
-            "tree" => TokenType::Tree,
-            "enum" => TokenType::Enum,
-            "type" => TokenType::Type,
-            "return" => TokenType::Return,
-            "and" => TokenType::And,
-            "or" => TokenType::Or,
-            "not" => TokenType::Not,
-            "xor" => TokenType::Xor,
-            "true" => TokenType::True,
-            "false" => TokenType::False,
-            "nil" => TokenType::Nil,
-            _ => TokenType::Identifier,
+            "global" => Type::Global,
+            "const" => Type::Const,
+            "static" => Type::Static,
+            "Jit" => Type::Jit,
+            "unsafe" => Type::Unsafe,
+            "coroutine" => Type::Coroutine,
+            "func" => Type::Func,
+            "this" => Type::This,
+            "struct" => Type::Struct,
+            "self" => Type::Slf,
+            "end" => Type::End,
+            "if" => Type::If,
+            "else" => Type::Else,
+            "elseif" => Type::ElseIf,
+            "then" => Type::Then,
+            "for" => Type::For,
+            "while" => Type::While,
+            "loop" => Type::Loop,
+            "break" => Type::Break,
+            "match" => Type::Match,
+            "to" => Type::To,
+            "in" => Type::In,
+            "with" => Type::With,
+            "bool" => Type::BoolType,
+            "uint8" => Type::UInt8Type,
+            "uint16" => Type::UInt16Type,
+            "uint32" => Type::UInt32Type,
+            "uint64" => Type::UInt64Type,
+            "uint128" => Type::UInt128Type,
+            "int8" => Type::Int8Type,
+            "int16" => Type::Int16Type,
+            "int32" => Type::Int32Type,
+            "int64" => Type::Int64Type,
+            "int128" => Type::Int128Type,
+            "flt32" => Type::Float32Type,
+            "flt64" => Type::Float64Type,
+            "char" => Type::CharType,
+            "string" => Type::StringType,
+            "array" => Type::Array,
+            "table" => Type::Table,
+            "stack" => Type::Stack,
+            "queue" => Type::Queue,
+            "set" => Type::Set,
+            "list" => Type::List,
+            "twolist" => Type::TwoList,
+            "heap" => Type::Heap,
+            "tree" => Type::Tree,
+            "enum" => Type::Enum,
+            "type" => Type::Type,
+            "return" => Type::Return,
+            "and" => Type::And,
+            "or" => Type::Or,
+            "not" => Type::Not,
+            "xor" => Type::Xor,
+            "true" => Type::True,
+            "false" => Type::False,
+            "nil" => Type::Nil,
+            _ => Type::Identifier,
         };
 
         Token::new(token_type, str.as_str().to_string())
@@ -602,7 +605,11 @@ impl Lexer {
         let mut tokens: Vec<Token> = vec![];
         loop {
             match tok.Type {
-                TokenType::Eof | TokenType::Illegal => break,
+                Type::Eof => {
+                    tokens.push(tok);
+                    break;
+                }
+                Type::Illegal => break,
                 _ => {
                     tokens.push(tok.clone());
                     tok = self.next_token();
@@ -628,11 +635,8 @@ mod tests {
     fn test_lexer_new() {
         let mut lexer = Lexer::new("int64".chars().collect::<Vec<char>>());
         let tok = lexer.next_token();
-        println!(
-            "TokenType: {}, TokenValue: {}",
-            &tok.type_literal, &tok.value
-        );
-        assert_eq!(tok.Type, TokenType::Int64Type);
+        println!("Type: {}, TokenValue: {}", &tok.type_literal, &tok.value);
+        assert_eq!(tok.Type, Type::Int64Type);
     }
 
     #[test]
@@ -644,27 +648,26 @@ mod tests {
         let tokens = lexer.tokenize();
         let expected = vec![
             Token {
-                Type: TokenType::StringType,
+                Type: Type::StringType,
                 type_literal: "StringType".to_string(),
                 value: "string".to_string(),
             },
             Token {
-                Type: TokenType::Identifier,
+                Type: Type::Identifier,
                 type_literal: "Identifier".to_string(),
                 value: "message".to_string(),
             },
             Token {
-                Type: TokenType::Assign,
+                Type: Type::Assign,
                 type_literal: "=".to_string(),
                 value: "=".to_string(),
             },
             Token {
-                Type: TokenType::StringVal(
-                    "\"Welcome to the Toolip programming language\"".to_string(),
-                ),
+                Type: Type::StringVal("\"Welcome to the Toolip programming language\"".to_string()),
                 type_literal: "StringVal".to_string(),
                 value: "\"Welcome to the Toolip programming language\"".to_string(),
             },
+            Token::new(Type::Eof, String::new()),
         ];
         assert_eq!(tokens, expected);
     }
