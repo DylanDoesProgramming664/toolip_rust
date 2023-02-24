@@ -8,3 +8,6 @@ func isTrue(bool a)
 		println("This bool is false")
 	end
 end
+
+isTrue(Bool1)
+isTrue(Bool2)

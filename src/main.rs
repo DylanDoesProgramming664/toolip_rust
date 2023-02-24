@@ -33,8 +33,7 @@ fn main() {
                 },
                 |contents| contents.chars().collect::<Vec<char>>(),
             );
-            let mut lexer = lexer::Lexer::new(contents);
-            lexer.print_tokens();
+            let _lexer = lexer::Lexer::new(contents);
         }
         _ => {
             println!("Too many arguments. Shutting down.");
