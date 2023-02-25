@@ -16,7 +16,9 @@ pub fn start() {
         match sig {
             Ok(Signal::Success(buffer)) => {
                 let line = buffer.chars().collect::<Vec<char>>();
-                let _lex = Lexer::new(line);
+                let mut lex = Lexer::new(line);
+                let tokens = lex.tokenize();
+                Lexer::print_tokens(tokens);
             }
             Ok(Signal::CtrlD | Signal::CtrlC) => {
                 println!("\nAborted!");

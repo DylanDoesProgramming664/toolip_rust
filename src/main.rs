@@ -7,6 +7,8 @@ mod parser;
 mod repl;
 mod token;
 
+use lexer::Lexer;
+
 #[quit::main]
 fn main() {
     let mut args = env::args();
@@ -33,7 +35,9 @@ fn main() {
                 },
                 |contents| contents.chars().collect::<Vec<char>>(),
             );
-            let _lexer = lexer::Lexer::new(contents);
+            let mut lexer = lexer::Lexer::new(contents);
+            let tokens = lexer.tokenize();
+            Lexer::print_tokens(tokens);
         }
         _ => {
             println!("Too many arguments. Shutting down.");

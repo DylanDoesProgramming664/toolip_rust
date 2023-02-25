@@ -1,9 +1,10 @@
 #![allow(unused_imports)]
 use crate::parser;
 use crate::token::{self, KeywordKind, SymbolKind, Token, TokenType, KEYWORDS, SYMBOLS};
+use std::cmp::{max, min};
 use std::{env, process::exit};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Lexer {
     input: Vec<char>,
     pos: usize,
@@ -38,6 +39,14 @@ impl Lexer {
             '\x00'
         } else {
             self.input[self.next_pos]
+        }
+    }
+
+    fn peek_nth_char(&mut self, n: usize) -> char {
+        if self.pos + n >= self.input.len() {
+            '\x00'
+        } else {
+            self.input[self.pos + n]
         }
     }
 
@@ -352,14 +361,14 @@ impl Lexer {
                             "Toolip:{}:{}: {} is not a valid char token.",
                             self.line_num,
                             self.line_pos,
-                            String::from_iter(&self.input[pos..=self.pos])
+                            String::from_iter(&self.input[pos..self.pos])
                         );
                         if env::args().len() > 1 {
                             exit(1);
                         }
                         return (
                             TokenType::Illegal,
-                            self.input[pos..=self.pos].iter().collect::<String>(),
+                            self.input[pos..self.pos].iter().collect::<String>(),
                         );
                     }
                     break;
@@ -374,7 +383,7 @@ impl Lexer {
                     }
                     return (
                         TokenType::Illegal,
-                        String::from_iter(&self.input[pos..=self.pos]),
+                        String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
                 '\x00' => {
@@ -387,7 +396,7 @@ impl Lexer {
                     }
                     return (
                         TokenType::Illegal,
-                        String::from_iter(&self.input[pos..=self.pos]),
+                        String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
                 _ => self.next_char(),
@@ -439,7 +448,7 @@ impl Lexer {
                     }
                     return (
                         TokenType::Illegal,
-                        String::from_iter(&self.input[pos..=self.pos]),
+                        String::from_iter(&self.input[pos..self.pos]),
                     );
                 }
                 _ => self.next_char(),
@@ -502,6 +511,16 @@ impl Lexer {
         loop {
             match self.char {
                 '`' => break,
+                '\x00' => {
+                    println!(
+                        "Toolip:{}:{}: Multi-line string never terminated.",
+                        self.line_num, self.line_pos
+                    );
+                    return (
+                        TokenType::Illegal,
+                        String::from_iter(&self.input[pos..self.pos]),
+                    );
+                }
                 _ => self.next_char(),
             }
         }
@@ -522,12 +541,16 @@ impl Lexer {
     fn read_number(&mut self) -> (TokenType, String) {
         let pos = self.pos;
         let mut dot_count = 0;
-        self.next_char();
         loop {
-            match self.char {
-                '0'..='9' => self.next_char(),
+            match self.peek_char() {
+                '0'..='9' => {
+                    self.next_char();
+                }
                 '.' => {
-                    if dot_count == 1 {
+                    if dot_count == 1
+                        || self.peek_nth_char(2) == '.'
+                        || !self.peek_nth_char(2).is_numeric()
+                    {
                         break;
                     }
                     dot_count += 1;
@@ -558,8 +581,7 @@ impl Lexer {
 
     fn read_identifier(&mut self) -> (TokenType, String) {
         let pos = self.pos;
-        self.next_char();
-        while let 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' = self.char {
+        while let 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' = self.peek_char() {
             self.next_char();
         }
 
@@ -576,5 +598,115 @@ impl Lexer {
             );
         }
         (TokenType::Identifier(ident.to_string()), ident)
+    }
+
+    pub fn tokenize(&mut self) -> Vec<Token> {
+        let mut tok = self.next_token();
+        let mut tokens: Vec<Token> = vec![];
+        loop {
+            match tok.Type {
+                TokenType::Eof => {
+                    tokens.push(tok);
+                    break;
+                }
+                TokenType::Illegal => break,
+                _ => {
+                    tokens.push(tok.clone());
+                    tok = self.next_token();
+                }
+            }
+        }
+        tokens
+    }
+
+    pub fn print_tokens(tokens: Vec<Token>) {
+        for token in tokens {
+            println!("Type: {}, Value: {}", token.type_literal, token.value);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexer_new() {
+        let input = "abra kadarbra, alakazam! 123.5 ,+-="
+            .chars()
+            .collect::<Vec<char>>();
+        let char = input[0];
+        let lexer = Lexer::new(input.clone());
+        let expected_lexer = Lexer {
+            input,
+            pos: 0,
+            next_pos: 1,
+            line_pos: 1,
+            line_num: 1,
+            char,
+            prev_char: '\x00',
+            prev_token: Token::new(TokenType::Empty, "<Empty>".to_owned()),
+        };
+        assert_eq!(lexer.input, expected_lexer.input);
+        assert_eq!(lexer.pos, expected_lexer.pos);
+        assert_eq!(lexer.next_pos, expected_lexer.next_pos);
+        assert_eq!(lexer.line_pos, expected_lexer.line_pos);
+        assert_eq!(lexer.line_num, expected_lexer.line_num);
+        assert_eq!(lexer.char, expected_lexer.char);
+        assert_eq!(lexer.prev_char, expected_lexer.prev_char);
+        assert_eq!(lexer.prev_token, expected_lexer.prev_token);
+    }
+}
+
+#[test]
+fn test_tokenize() {
+    let input = "abra kadarbra, alakazam! 123.5 ,+-=;\n \"sphaghetti\" c0d3 @#$%^&*()[]{}/|~"
+        .chars()
+        .collect::<Vec<char>>();
+    let mut lexer = Lexer::new(input);
+    let tokens = lexer.tokenize();
+    let expected_tokens = vec![
+        Token::new(TokenType::Identifier("abra".to_owned()), "abra".to_owned()),
+        Token::new(
+            TokenType::Identifier("kadarbra".to_owned()),
+            "kadarbra".to_owned(),
+        ),
+        Token::new(TokenType::Symbol(SymbolKind::Comma), ",".to_owned()),
+        Token::new(
+            TokenType::Identifier("alakazam".to_owned()),
+            "alakazam".to_owned(),
+        ),
+        Token::new(TokenType::Symbol(SymbolKind::BoolNot), "!".to_owned()),
+        Token::new(TokenType::Float64Val(123.5), "123.5".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Comma), ",".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Plus), "+".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::MinusAssign), "-=".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Semicolon), ";".to_owned()),
+        Token::new(TokenType::NewLine, "\n".to_owned()),
+        Token::new(
+            TokenType::StringVal("sphaghetti".to_owned()),
+            "\"sphaghetti\"".to_owned(),
+        ),
+        Token::new(TokenType::Identifier("c0d3".to_owned()), "c0d3".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::AtSign), "@".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Hash), "#".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::DollarSign), "$".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Modulo), "%".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::BitXor), "^".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::BitAnd), "&".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Multiply), "*".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::LeftParen), "(".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::RightParen), ")".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::LeftBracket), "[".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::RightBracket), "]".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::LeftBrace), "{".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::RightBrace), "}".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::Divide), "/".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::BitOr), "|".to_owned()),
+        Token::new(TokenType::Symbol(SymbolKind::BitNot), "~".to_owned()),
+        Token::new(TokenType::Eof, "\x00".to_owned()),
+    ];
+    for i in 0..tokens.len() {
+        assert_eq!(tokens[i], expected_tokens[i]);
     }
 }

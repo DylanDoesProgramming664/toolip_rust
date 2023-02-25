@@ -1,5 +1,6 @@
 #![allow(dead_code, non_snake_case)]
 use crate::lexer::Lexer;
+use std::process::exit;
 
 pub const KEYWORDS: &[&str] = &[
     "illegal",
@@ -415,7 +416,10 @@ pub fn match_keyword_to_index(index: usize) -> KeywordKind {
         56 => KeywordKind::True,
         57 => KeywordKind::False,
         58 => KeywordKind::Nil,
-        _ => unreachable!(),
+        _ => {
+            println!("{index} is out of bounds.");
+            exit(1);
+        }
     }
 }
 #[cfg(test)]
@@ -424,14 +428,19 @@ mod tests {
 
     #[test]
     fn test_len_keywords() {
-        assert_eq!(KEYWORDS.len(), 60);
+        assert_eq!(KEYWORDS.len(), 59);
+    }
+
+    #[test]
+    fn test_len_symbols() {
+        assert_eq!(SYMBOLS.len(), 61);
     }
 
     #[test]
     fn test_token_new() {
         let token = Token::new(TokenType::Keyword(KeywordKind::Int32), "int32".to_owned());
         assert_eq!(token.Type, TokenType::Keyword(KeywordKind::Int32));
-        assert_eq!(token.type_literal, "int32".to_owned());
+        assert_eq!(token.type_literal, "KW_Int32".to_owned());
         assert_eq!(token.value, "int32".to_owned());
     }
 
@@ -440,7 +449,7 @@ mod tests {
         let mut token = Token::new(TokenType::Keyword(KeywordKind::Int32), "int32".to_owned());
         token.new_type(TokenType::Keyword(KeywordKind::Int64));
         assert_eq!(token.Type, TokenType::Keyword(KeywordKind::Int64));
-        assert_eq!(token.type_literal, "Keyword".to_owned());
+        assert_eq!(token.type_literal, "KW_Int64".to_owned());
     }
 
     #[test]
@@ -449,7 +458,7 @@ mod tests {
         let value = "int64".to_owned();
         token.reevaluate_token(&value);
         assert_eq!(token.Type, TokenType::Keyword(KeywordKind::Int64));
-        assert_eq!(token.type_literal, "Keyword".to_owned());
+        assert_eq!(token.type_literal, "KW_Int64".to_owned());
         assert_eq!(token.value, value);
     }
 }
