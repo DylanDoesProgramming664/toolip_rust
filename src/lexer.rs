@@ -1,7 +1,4 @@
-#![allow(unused_imports)]
-use crate::parser;
 use crate::token::{self, KeywordKind, SymbolKind, Token, TokenType, KEYWORDS, SYMBOLS};
-use std::cmp::{max, min};
 use std::{env, process::exit};
 
 #[derive(Debug, Clone, PartialEq)]
