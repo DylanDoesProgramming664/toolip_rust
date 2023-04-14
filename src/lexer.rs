@@ -1,4 +1,4 @@
-use crate::token::{self, KeywordKind, SymbolKind, Token, TokenType, KEYWORDS, SYMBOLS};
+use crate::token::{self, SymbolKind, Token, TokenType, KEYWORDS};
 use std::{env, process::exit};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,22 +28,22 @@ impl Lexer {
 
         lexer.next_char();
 
-        lexer
+        return lexer;
     }
 
     fn peek_char(&mut self) -> char {
         if self.next_pos >= self.input.len() {
-            '\x00'
+            return '\x00';
         } else {
-            self.input[self.next_pos]
+            return self.input[self.next_pos];
         }
     }
 
     fn peek_nth_char(&mut self, n: usize) -> char {
         if self.pos + n >= self.input.len() {
-            '\x00'
+            return '\x00';
         } else {
-            self.input[self.pos + n]
+            return self.input[self.pos + n];
         }
     }
 
@@ -71,7 +71,7 @@ impl Lexer {
         self.prev_token = token.clone();
         self.next_char();
 
-        token
+        return token;
     }
 
     fn skip_whitespace(&mut self) {
@@ -123,7 +123,7 @@ impl Lexer {
     }
 
     fn match_token(&mut self, char: char) -> (TokenType, String) {
-        match char {
+        return match char {
             '=' => match self.peek_char() {
                 '=' => {
                     self.next_char();
@@ -339,7 +339,7 @@ impl Lexer {
             '\n' => (TokenType::NewLine, "\n".to_owned()),
             '\x00' => (TokenType::Eof, "\x00".to_owned()),
             x => self.read_complex_token(x),
-        }
+        };
     }
 
     fn read_char_string(&mut self) -> (TokenType, String) {
