@@ -1,6 +1,5 @@
 #![allow(dead_code, non_snake_case)]
 use crate::lexer::Lexer;
-use std::process::exit;
 
 pub const KEYWORDS: &[&str] = &[
     "illegal",
@@ -416,10 +415,7 @@ pub fn match_keyword_to_index(index: usize) -> KeywordKind {
         56 => KeywordKind::True,
         57 => KeywordKind::False,
         58 => KeywordKind::Nil,
-        _ => {
-            println!("{index} is out of bounds.");
-            exit(1);
-        }
+        _ => KeywordKind::Illegal,
     }
 }
 #[cfg(test)]

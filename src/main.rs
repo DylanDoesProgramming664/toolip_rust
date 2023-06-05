@@ -9,7 +9,6 @@ mod token;
 
 use lexer::Lexer;
 
-#[quit::main]
 fn main() {
     let mut args = env::args();
     match args.len() {
